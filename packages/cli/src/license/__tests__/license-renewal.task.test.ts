@@ -13,7 +13,7 @@ describe('LicenseRenewalTask', () => {
 		task = new LicenseRenewalTask(license);
 	});
 
-	it('should declare the SDK renewal check cadence', () => {
+	it('should retain the existing task schedule', () => {
 		expect(task.name).toBe('license-renewal');
 		expect(task.schedule).toEqual({ kind: 'interval', intervalSeconds: 900 });
 		expect(task.target).toEqual({

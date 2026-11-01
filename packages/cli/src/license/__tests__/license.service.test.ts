@@ -1,10 +1,8 @@
 import type { LicenseState } from '@n8n/backend-common';
-import { markHttpRequestError } from '@n8n/backend-network';
-import type { HttpRequestClient, OutboundHttp } from '@n8n/backend-network';
 import type { EventService } from '@n8n/backend-services';
 import type { WorkflowRepository } from '@n8n/db';
 import type { TEntitlement } from '@n8n_io/license-sdk';
-import { AxiosError } from 'axios';
+import nock from 'nock';
 import { mock } from 'vitest-mock-extended';
 
 import { BadRequestError } from '@n8n/errors';
@@ -17,17 +15,12 @@ describe('LicenseService', () => {
 	const workflowRepository = mock<WorkflowRepository>();
 	const entitlement = mock<TEntitlement>({ productId: '123' });
 	const eventService = mock<EventService>();
-	const request = vi.fn();
-	const requests = vi.fn().mockReturnValue(mock<HttpRequestClient>({ request }));
-	const outboundHttp = mock<OutboundHttp>({ requests });
 	const licenseService = new LicenseService(
 		mock(),
 		license,
 		licenseState,
 		workflowRepository,
-		mock(),
 		eventService,
-		outboundHttp,
 	);
 
 	license.getMainPlan.mockReturnValue(entitlement);
@@ -38,6 +31,8 @@ describe('LicenseService', () => {
 	workflowRepository.getWorkflowsWithEvaluationCount.mockResolvedValue(1);
 
 	beforeEach(() => vi.clearAllMocks());
+	beforeAll(() => nock.disableNetConnect());
+	afterAll(() => nock.enableNetConnect());
 
 	class LicenseError extends Error {
 		constructor(readonly errorId: string) {
@@ -91,7 +86,7 @@ describe('LicenseService', () => {
 
 		it('should throw LicenseEulaRequiredError when EULA_REQUIRED error occurs', async () => {
 			const eulaError = new LicenseError('EULA_REQUIRED');
-			(eulaError as any).info = { eula: { uri: 'https://n8n.io/legal/eula/' } };
+			Object.assign(eulaError, { info: { eula: { uri: 'https://n8n.io/legal/eula/' } } });
 			license.activate.mockRejectedValueOnce(eulaError);
 
 			await expect(licenseService.activateLicense('activation-key')).rejects.toThrow(
@@ -142,67 +137,24 @@ describe('LicenseService', () => {
 		});
 	});
 
-	describe('registerCommunityEdition', () => {
-		test('on success', async () => {
-			request.mockResolvedValueOnce({ title: 'Title', text: 'Text', licenseKey: 'abc-123' });
-			const data = await licenseService.registerCommunityEdition({
-				userId: '123',
-				email: 'test@ema.il',
-				instanceId: '123',
-				instanceUrl: 'http://localhost',
-				licenseType: 'community-registered',
-			});
-
-			expect(data).toEqual({ title: 'Title', text: 'Text' });
-			expect(request).toHaveBeenCalledWith({
-				url: 'https://enterprise.n8n.io/community-registered',
-				method: 'POST',
-				body: {
-					email: 'test@ema.il',
-					instanceId: '123',
-					instanceUrl: 'http://localhost',
-					licenseType: 'community-registered',
-				},
-				json: true,
-			});
-			expect(eventService.emit).toHaveBeenCalledWith('license-community-plus-registered', {
-				userId: '123',
-				email: 'test@ema.il',
-				licenseKey: 'abc-123',
-			});
+	test('returns local registration status without sending a registration event', async () => {
+		const data = await licenseService.registerCommunityEdition({
+			userId: '123',
+			email: 'user@example.com',
+			instanceId: '123',
+			instanceUrl: 'http://localhost',
+			licenseType: 'community-registered',
 		});
 
-		test('on failure surfaces the upstream error message', async () => {
-			// The real client tags the errors it rejects; mirror that so the guard fires.
-			const requestError = markHttpRequestError(new AxiosError('Failed'));
-			requestError.response = mock<AxiosError['response']>({
-				data: { message: 'Email already registered' },
-			});
-			request.mockRejectedValueOnce(requestError);
-			await expect(
-				licenseService.registerCommunityEdition({
-					userId: '123',
-					email: 'test@ema.il',
-					instanceId: '123',
-					instanceUrl: 'http://localhost',
-					licenseType: 'community-registered',
-				}),
-			).rejects.toThrowError('Failed to register community edition: Email already registered');
-			expect(eventService.emit).not.toHaveBeenCalled();
+		expect(data).toEqual({
+			title: 'Features are already available',
+			text: 'This installation does not require registration or a license key.',
 		});
+		expect(eventService.emit).not.toHaveBeenCalled();
+	});
 
-		test('on non-HTTP failure throws a generic error', async () => {
-			request.mockRejectedValueOnce(new Error('boom'));
-			await expect(
-				licenseService.registerCommunityEdition({
-					userId: '123',
-					email: 'test@ema.il',
-					instanceId: '123',
-					instanceUrl: 'http://localhost',
-					licenseType: 'community-registered',
-				}),
-			).rejects.toThrowError('Failed to register community edition');
-			expect(eventService.emit).not.toHaveBeenCalled();
-		});
+	test('completes trial requests locally', async () => {
+		await expect(licenseService.requestEnterpriseTrial(mock())).resolves.toBeUndefined();
+		expect(eventService.emit).not.toHaveBeenCalled();
 	});
 });

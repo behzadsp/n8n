@@ -1,0 +1,28 @@
+import type { FeatureReturnType } from '@n8n/backend-common';
+import { LICENSE_FEATURES, LICENSE_QUOTAS, UNLIMITED_LICENSE_QUOTA } from '@n8n/constants';
+
+// Local features do not require a certificate in this MIT-licensed distribution.
+export const localLicenseFeatures: FeatureReturnType = {
+	planName: 'Enterprise',
+	[LICENSE_QUOTAS.TRIGGER_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.VARIABLES_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.USERS_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.WORKFLOW_HISTORY_PRUNE_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.TEAM_PROJECT_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.INSIGHTS_MAX_HISTORY_DAYS]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.WORKFLOWS_WITH_EVALUATION_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+	[LICENSE_QUOTAS.EVALUATION_CONCURRENCY_LIMIT]: UNLIMITED_LICENSE_QUOTA,
+};
+
+for (const feature of Object.values(LICENSE_FEATURES)) {
+	// This distribution does not provide hosted billing entitlements.
+	if (
+		feature === LICENSE_FEATURES.AI_GATEWAY_CLOUD_UBB ||
+		feature === LICENSE_FEATURES.AI_ASSISTANT_CLOUD_UBB_ENTITLEMENT
+	) {
+		continue;
+	}
+
+	localLicenseFeatures[feature] =
+		feature !== LICENSE_FEATURES.API_DISABLED && feature !== LICENSE_FEATURES.SHOW_NON_PROD_BANNER;
+}

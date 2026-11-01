@@ -1,19 +1,17 @@
 import { Time } from '@n8n/constants';
 import { clusterTarget, intervalFromMilliseconds, SystemTask } from '@n8n/decorators';
 import type { SystemTaskSchedule } from '@n8n/decorators';
-import { AUTORENEWAL_INTERVAL } from '@n8n_io/license-sdk';
 
 import { License } from '@/license';
 
-/**
- * Renews the license when the SDK reports a renewal as due. An entitlement-end
- * renewal is due only inside a 15-minute window, so a longer interval misses it.
- */
+/** Retains the task interface for existing scheduler callers. Local renewal does nothing. */
 @SystemTask()
 export class LicenseRenewalTask implements SystemTask {
 	readonly name = 'license-renewal';
 
-	readonly schedule: SystemTaskSchedule = intervalFromMilliseconds(AUTORENEWAL_INTERVAL);
+	readonly schedule: SystemTaskSchedule = intervalFromMilliseconds(
+		15 * Time.minutes.toMilliseconds,
+	);
 
 	readonly target = clusterTarget({
 		scheduler: {

@@ -35,11 +35,6 @@ export async function mainSystemTasks(globalConfig: GlobalConfig): Promise<Syste
 		tasks.push(WorkflowHistoryCompactionTrimTask);
 	}
 
-	if (globalConfig.license.autoRenewalEnabled) {
-		const { LicenseRenewalTask } = await import('@/license/license-renewal.task.js');
-		tasks.push(LicenseRenewalTask);
-	}
-
 	if (globalConfig.executions.pruneData) {
 		const { ExecutionPruningSoftDeleteTask } = await import(
 			'@/services/pruning/execution-pruning-soft-delete.task.js'

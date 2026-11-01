@@ -44,7 +44,6 @@ it('should return every main task when all features are on', async () => {
 		PendingAuthorizationCleanupTask,
 		IdempotencyKeyCleanupTask,
 		WorkflowHistoryCompactionTrimTask,
-		LicenseRenewalTask,
 		ExecutionPruningSoftDeleteTask,
 		ExecutionPruningHardDeleteTask,
 		TelemetryPulseTask,
@@ -81,12 +80,15 @@ it('should leave out outbox cleanup when the publication service is off', async 
 	expect(tasks).toContain(ExecutionPruningSoftDeleteTask);
 });
 
-it('should leave out license renewal when auto-renewal is off', async () => {
-	const tasks = await mainSystemTasks(configWith({ autoRenewalEnabled: false }));
+it.each([true, false])(
+	'should leave out license renewal with autoRenewalEnabled=%s',
+	async (autoRenewalEnabled) => {
+		const tasks = await mainSystemTasks(configWith({ autoRenewalEnabled }));
 
-	expect(tasks).not.toContain(LicenseRenewalTask);
-	expect(tasks).toContain(ExecutionPruningSoftDeleteTask);
-});
+		expect(tasks).not.toContain(LicenseRenewalTask);
+		expect(tasks).toContain(ExecutionPruningSoftDeleteTask);
+	},
+);
 
 it('should leave out the statistics rollup when the database is not Postgres', async () => {
 	const tasks = await mainSystemTasks(configWith({ dbType: 'sqlite' }));

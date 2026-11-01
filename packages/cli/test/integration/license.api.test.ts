@@ -1,6 +1,5 @@
 import { testDb } from '@n8n/backend-test-utils';
 import { GLOBAL_MEMBER_ROLE, GLOBAL_OWNER_ROLE, type User } from '@n8n/db';
-import nock from 'nock';
 
 import { RESPONSE_ERROR_MESSAGES } from '@/constants';
 import type { ILicensePostResponse, ILicenseReadResponse } from '@/interfaces';
@@ -42,8 +41,6 @@ describe('GET /license', () => {
 });
 
 describe('POST /license/enterprise/request_trial', () => {
-	nock('https://enterprise.n8n.io').post('/enterprise-trial').reply(200);
-
 	test('should work for instance owner', async () => {
 		await authOwnerAgent.post('/license/enterprise/request_trial').expect(200);
 	});
