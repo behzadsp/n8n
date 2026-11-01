@@ -1,10 +1,10 @@
-![Banner image](https://raw.githubusercontent.com/n8n-io/n8n/master/assets/readme-banner.jpg)
+![Banner image](assets/readme-banner.jpg)
 
 # n8n – The Platform for AI Agents and Workflow Automation
 
-Fair-code platform to build and deploy AI agents and workflows. Combine a visual canvas with custom code, run it self-hosted or in the [cloud](https://app.n8n.cloud/login), and connect to 1500+ integrations. AI automation you can trust with real work, from prototype to production.
+This is the [behzadsp/n8n fork](https://github.com/behzadsp/n8n). Build and run this repository to use its local enterprise features. Upstream npm packages, Docker images, and n8n Cloud do not include this fork's changes.
 
-![n8n.io - Screenshot](https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-screenshot-readme.png)
+![n8n.io - Screenshot](assets/n8n-screenshot-readme.png)
 
 ## Key Capabilities
 
@@ -17,20 +17,34 @@ Fair-code platform to build and deploy AI agents and workflows. Combine a visual
 
 ## Quick Start
 
-Try n8n instantly with our install script (requires [Docker](https://www.docker.com/)):
+Install Node.js 24 or newer and pnpm 12.4.2. Then build this repository:
 
 ```sh
-curl -fsSL https://get.n8n.io | sh
+git clone https://github.com/behzadsp/n8n.git
+cd n8n
+pnpm install --frozen-lockfile
+pnpm build > build.log 2>&1
+pnpm start
 ```
 
-Or deploy manually with [Docker](https://docs.n8n.io/hosting/installation/docker/):
+Access the editor at http://localhost:5678.
+
+### Docker
+
+Build the fork images from the same checkout. This command also prepares the production deployment:
+
+```sh
+IMAGE_BASE_NAME=behzadsp/n8n RUNNERS_IMAGE_BASE_NAME=behzadsp/runners pnpm build:docker > build-docker.log 2>&1
+```
+
+Then run the local image:
 
 ```
 docker volume create n8n_data
-docker run -it --rm --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
+docker run -it --rm --pull=never --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n behzadsp/n8n:local
 ```
 
-Access the editor at http://localhost:5678
+For the full compose stack, see the [Docker guide](docker/images/n8n/README.md). The fork images must be built locally before you run the installer. Separate base images and sandbox services still come from their original providers.
 
 ## Resources
 
@@ -48,19 +62,11 @@ Need help? Our community forum is the place to get support and connect with othe
 
 ## License
 
-n8n is [fair-code](https://faircode.io) distributed under the [Sustainable Use License](https://github.com/n8n-io/n8n/blob/master/LICENSE.md) and [n8n Enterprise License](https://github.com/n8n-io/n8n/blob/master/LICENSE_EE.md).
-
-- **Source Available**: Always visible source code
-- **Self-Hostable**: Deploy anywhere
-- **Extensible**: Add your own nodes and functionality
-
-[Enterprise Licenses](mailto:license@n8n.io) available for additional features and support.
-
-Additional information about the license model can be found in the [docs](https://docs.n8n.io/sustainable-use-license/).
+See this repository's [LICENSE.md](LICENSE.md) and [LICENSE_EE.md](LICENSE_EE.md). Third-party components retain their own licenses.
 
 ## Contributing
 
-Found a bug 🐛 or have a feature idea ✨? Check our [Contributing Guide](https://github.com/n8n-io/n8n/blob/master/CONTRIBUTING.md) for a setup guide & best practices.
+See the [Contributing Guide](CONTRIBUTING.md) for setup instructions. Report fork-specific issues in [behzadsp/n8n](https://github.com/behzadsp/n8n/issues).
 
 ## Join the Team
 

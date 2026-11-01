@@ -16,14 +16,14 @@ for (let { name, path, version, private: isPrivate } of packages) {
 		...JSON.parse(await readFile(packageFile, 'utf-8')),
 		// Add these fields to all published package.json files to ensure provenance checks pass
 		license: 'SEE LICENSE IN LICENSE.md',
-		homepage: 'https://n8n.io',
+		homepage: 'https://github.com/behzadsp/n8n',
 		author: {
 			name: 'Jan Oberhauser',
 			email: 'jan@n8n.io',
 		},
 		repository: {
 			type: 'git',
-			url: 'git+https://github.com/n8n-io/n8n.git',
+			url: 'git+https://github.com/behzadsp/n8n.git',
 		},
 	};
 

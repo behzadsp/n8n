@@ -71,7 +71,7 @@ dependencies are installed and the packages get linked correctly. Here's a short
 
 ### Dev Container
 
-If you already have VS Code and Docker installed, you can click [here](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/n8n-io/n8n) to get started. Clicking these links will cause VS Code to automatically install the Dev Containers extension if needed, clone the source code into a container volume, and spin up a dev container for use.
+If you already have VS Code and Docker installed, you can click [here](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/behzadsp/n8n) to get started. Clicking these links will cause VS Code to automatically install the Dev Containers extension if needed, clone the source code into a container volume, and spin up a dev container for use.
 
 ### Requirements
 
@@ -159,10 +159,10 @@ checked out and set up:
 
 1. [Fork](https://guides.github.com/activities/forking/#fork) the n8n repository.
 
-2. Clone your forked repository:
+2. Clone this fork (or your own fork for contributions):
 
    ```
-   git clone https://github.com/<your_github_username>/n8n.git
+   git clone https://github.com/behzadsp/n8n.git
    ```
 
 3. Go into repository folder:
@@ -390,16 +390,16 @@ We use [**Testcontainers**](https://testcontainers.com/) to easily and quickly s
 
 **1. Get a Docker image**
 
-You can either build one from your own branch:
+Build an image from this fork:
 
 ```bash
-pnpm build:docker
+IMAGE_BASE_NAME=behzadsp/n8n RUNNERS_IMAGE_BASE_NAME=behzadsp/runners pnpm build:docker > build-docker.log 2>&1
 ```
 
 or set an environment variable to use a different image:
 
 ```bash
-N8N_DOCKER_IMAGE=n8nio/n8n:latest
+N8N_DOCKER_IMAGE=behzadsp/n8n:local
 ```
 
 **2. Run a stack**

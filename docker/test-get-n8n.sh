@@ -96,10 +96,11 @@ else
 	[ "$(find "$WORK/a/.env" -perm 0600)" = "$WORK/a/.env" ] && pass ".env is mode 600" || fail ".env is mode 600"
 fi
 check "compose.yml validates with generated .env" docker compose -f "$WORK/a/compose.yml" config -q
-case "$(env_value "$WORK/a" N8N_VERSION)" in
-[0-9]*.[0-9]*) pass "default install resolves a sane n8n version" ;;
-*) fail "default install resolves a sane n8n version" ;;
-esac
+check "default install uses the local fork tag" test "$(env_value "$WORK/a" N8N_VERSION)" = local
+resolved_images="$(docker compose -f "$WORK/a/compose.yml" config --images)"
+echo "$resolved_images" | grep -qx 'behzadsp/n8n:local' && pass "n8n uses the fork image" || fail "n8n uses the fork image"
+echo "$resolved_images" | grep -qx 'behzadsp/runners:local' && pass "runners use the fork image" || fail "runners use the fork image"
+check_not "installer does not query upstream releases" grep -q 'api.github.com/repos/n8n-io/n8n' "$SCRIPT"
 
 # sandbox images follow one pin in .env; compose.yml carries no tags of its own
 [ -n "$SANDBOX_PIN" ] && [ "$(env_value "$WORK/a" N8N_SANDBOX_VERSION)" = "$SANDBOX_PIN" ] &&
@@ -337,8 +338,8 @@ if [ "$E2E" -eq 1 ]; then
 
 	# upgrade: only the version lines may change, and the new images must run.
 	# Pin the target explicitly so the assertion is deterministic (a bare
-	# --upgrade resolves the latest stable release at run time).
-	target="$(sed -n 's/^FALLBACK_N8N_VERSION="\(.*\)"$/\1/p' "$SCRIPT")"
+	# --upgrade uses the local fork tag).
+	target="$(sed -n 's/^DEFAULT_N8N_VERSION="\(.*\)"$/\1/p' "$SCRIPT")"
 	cp "$E2E_DIR/.env" "$WORK/env-before"
 	check "--upgrade succeeds" env N8N_DIR="$E2E_DIR" sh "$SCRIPT" --upgrade --version "$target"
 	diff "$WORK/env-before" "$E2E_DIR/.env" >"$WORK/env.diff" 2>&1 || true

@@ -1,8 +1,8 @@
-# n8n stack definition for get-n8n.sh (https://get.n8n.io).
+# n8n stack definition for get-n8n.sh (https://github.com/behzadsp/n8n).
 # Downloaded at install time; the copy in your install directory is yours to
 # edit. On --upgrade the script only repoints the sandbox image tags below at
 # N8N_SANDBOX_VERSION. To review changes between versions:
-# https://github.com/n8n-io/n8n/commits/master/docker/get-n8n-compose.yml
+# https://github.com/behzadsp/n8n/commits/master/docker/get-n8n-compose.yml
 # compose-version: 2
 
 # The sandbox service API, runner and sandbox images ship as one release and
@@ -78,7 +78,8 @@ services:
     # Never expose this container's ports publicly — it runs privileged Docker-in-Docker.
 
   n8n:
-    image: docker.io/n8nio/n8n:${N8N_VERSION}
+    image: behzadsp/n8n:${N8N_VERSION}
+    pull_policy: never
     depends_on:
       sandbox-api:
         condition: service_healthy
@@ -89,7 +90,8 @@ services:
       - n8n-data:/home/node/.n8n
 
   runners:
-    image: ghcr.io/n8n-io/runners:${N8N_VERSION}
+    image: behzadsp/runners:${N8N_VERSION}
+    pull_policy: never
     depends_on:
       - n8n
     environment:

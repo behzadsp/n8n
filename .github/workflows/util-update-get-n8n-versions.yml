@@ -15,7 +15,9 @@ concurrency:
 jobs:
   update-versions:
     name: Update get-n8n versions
+    # This updater selects upstream application releases.
     if: >-
+      github.repository == 'n8n-io/n8n' &&
       github.ref_name == github.event.repository.default_branch &&
       (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.repository == 'n8n-io/n8n'))

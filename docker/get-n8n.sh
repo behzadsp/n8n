@@ -3,31 +3,30 @@
 # get-n8n.sh — one-script setup for a self-hosted n8n instance (docker compose).
 #
 # Usage:
-#   curl -fsSL https://get.n8n.io | sh
-#   curl -fsSL https://get.n8n.io | sh -s -- --upgrade
+#   curl -fsSL https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n.sh | sh -s -- --upgrade
 #
 # Prefer to inspect before running?
-#   curl -fsSL https://get.n8n.io -o get-n8n.sh && less get-n8n.sh && sh get-n8n.sh
+#   curl -fsSL https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n.sh -o get-n8n.sh && less get-n8n.sh && sh get-n8n.sh
 #
-# Source: https://github.com/n8n-io/n8n/blob/master/docker/get-n8n.sh
+# Source: https://github.com/behzadsp/n8n/blob/master/docker/get-n8n.sh
 set -eu
 
 SCRIPT_VERSION="1.4.0"
-# The version to install is derived from the latest stable GitHub release in
-# resolve_n8n_version(); this fallback only applies when that lookup fails.
-FALLBACK_N8N_VERSION="2.43.4"
+# Build the fork images before running this installer. No upstream release is selected.
+DEFAULT_N8N_VERSION="local"
 # Sandbox service release (API, runner and sandbox images ship together).
 # Pinned here, not resolved at run time: the stack definition must match it.
 # --upgrade moves existing installs to this pin.
 SANDBOX_VERSION="1.8.1"
 N8N_DIR="${N8N_DIR:-./n8n}"
 N8N_PORT=5678
-SOURCE_URL="https://github.com/n8n-io/n8n/blob/master/docker/get-n8n.sh"
+SOURCE_URL="https://github.com/behzadsp/n8n/blob/master/docker/get-n8n.sh"
 # The stack definition lives next to this script in the repo and is downloaded
 # at install time. A plain filesystem path also works (used by the test
 # harness to install from a working copy).
-COMPOSE_SOURCE="${N8N_COMPOSE_URL:-https://raw.githubusercontent.com/n8n-io/n8n/master/docker/get-n8n-compose.yml}"
-COMPOSE_HISTORY_URL="https://github.com/n8n-io/n8n/commits/master/docker/get-n8n-compose.yml"
+COMPOSE_SOURCE="${N8N_COMPOSE_URL:-https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n-compose.yml}"
+COMPOSE_HISTORY_URL="https://github.com/behzadsp/n8n/commits/master/docker/get-n8n-compose.yml"
 DOCS_HOSTING_URL="https://docs.n8n.io/hosting/"
 DOCS_EVERYDAY_URL="https://docs.n8n.io/deploy/host-n8n/install-options/one-line-setup#everyday-commands"
 
@@ -108,15 +107,15 @@ usage() {
 get-n8n.sh v${SCRIPT_VERSION} — set up a self-hosted n8n instance with docker compose.
 
 Usage: get-n8n.sh [options]
-       curl -fsSL https://get.n8n.io | sh -s -- [options]
+       curl -fsSL https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n.sh | sh -s -- [options]
 
 Options:
   --version [x.y.z]  Without a value: print script version and the n8n version
-                     that would be installed (latest stable). With a value:
-                     install (or, with --upgrade, upgrade to) that n8n version.
+                     that would be installed (local build). With a value:
+                     use locally built fork images with that version tag.
   --upgrade          Upgrade an existing install: updates the N8N_VERSION and
                      N8N_SANDBOX_VERSION lines in .env, points the sandbox image
-                     tags in compose.yml at N8N_SANDBOX_VERSION, pulls images
+                     tags in compose.yml at N8N_SANDBOX_VERSION, pulls sidecars
                      and restarts. Never touches any other configuration or
                      secrets.
   --no-start         Write the configuration files but don't start n8n.
@@ -125,6 +124,10 @@ Options:
 Environment:
   N8N_DIR            Install directory (default: ./n8n)
   DO_NOT_TRACK=1     Never offer to send an anonymous failure report.
+
+Before running, build behzadsp/n8n:local and behzadsp/runners:local:
+  IMAGE_BASE_NAME=behzadsp/n8n RUNNERS_IMAGE_BASE_NAME=behzadsp/runners pnpm build:docker > build-docker.log 2>&1
+Run the build command from a checkout of https://github.com/behzadsp/n8n.
 
 For production-grade setups (TLS, Postgres, queue mode) see:
   ${DOCS_HOSTING_URL}
@@ -141,7 +144,7 @@ parse_args() {
 					REQUESTED_VERSION="$2"
 					shift
 				else
-					say "get-n8n.sh v${SCRIPT_VERSION} (installs the latest stable n8n, currently $(resolve_n8n_version), with sandbox service ${SANDBOX_VERSION})"
+					say "get-n8n.sh v${SCRIPT_VERSION} (uses locally built fork images tagged $(resolve_n8n_version), with sandbox service ${SANDBOX_VERSION})"
 					exit 0
 				fi
 				;;
@@ -240,8 +243,9 @@ gen_secret() {
 	fi
 }
 
-# Exactly three dot-separated numeric components (e.g. 2.32.0).
+# Accept the default local tag or three numeric version components.
 valid_n8n_version() {
+	[ "$1" = "local" ] && return 0
 	case "$1" in
 	*[!0-9.]* | *.*.*.* | .* | *. | *..*) return 1 ;;
 	[0-9]*.[0-9]*.[0-9]*) return 0 ;;
@@ -249,17 +253,9 @@ valid_n8n_version() {
 	esac
 }
 
-# Latest stable n8n version from GitHub releases; FALLBACK_N8N_VERSION covers
-# offline/API failures. Installs stay pinned in .env — never a floating tag,
-# which would silently upgrade (and run DB migrations) on any container recreate.
+# The fork has no published application images. Use the local build by default.
 resolve_n8n_version() {
-	releases_url="https://api.github.com/repos/n8n-io/n8n/releases/latest"
-	v="$(fetch "$releases_url" | sed -n 's/.*"tag_name": *"n8n@\([0-9][0-9.]*\)".*/\1/p' | head -n1)"
-	if valid_n8n_version "$v"; then
-		printf '%s\n' "$v"
-	else
-		printf '%s\n' "$FALLBACK_N8N_VERSION"
-	fi
+	printf '%s\n' "$DEFAULT_N8N_VERSION"
 }
 
 write_env() {
@@ -411,9 +407,9 @@ check_rate_limit() {
 # retry quietly to get the error text for classification — a rate-limited pull
 # fails again instantly, a transient blip just succeeds on the retry.
 compose_pull() {
-	compose pull && return 0
+	compose pull sandbox-certs sandbox-api sandbox-runner-1 searxng && return 0
 	log="$(mktemp)"
-	if compose pull -q >"$log" 2>&1; then
+	if compose pull -q sandbox-certs sandbox-api sandbox-runner-1 searxng >"$log" 2>&1; then
 		rm -f "$log"
 		return 0
 	fi
@@ -457,7 +453,7 @@ do_upgrade() {
 	if [ "$NO_START" -eq 1 ]; then
 		say ""
 		say "Not restarting (--no-start). To apply the upgrade:"
-		say "  docker compose -f ${N8N_DIR}/compose.yml pull && docker compose -f ${N8N_DIR}/compose.yml up -d"
+		say "  docker compose -f ${N8N_DIR}/compose.yml up -d"
 		exit 0
 	fi
 
@@ -528,7 +524,7 @@ main() {
 			say "To start it:  docker compose -f ${N8N_DIR}/compose.yml up -d"
 			say "Once started, n8n runs at: http://localhost:${N8N_PORT}"
 		fi
-		say "To upgrade:   curl -fsSL https://get.n8n.io | sh -s -- --upgrade"
+		say "To upgrade:   curl -fsSL https://raw.githubusercontent.com/behzadsp/n8n/master/docker/get-n8n.sh | sh -s -- --upgrade"
 		say "To uninstall: docker compose -f ${N8N_DIR}/compose.yml down -v && rm -rf ${N8N_DIR}   # DELETES all n8n data"
 		check_compose_freshness
 		exit 0
